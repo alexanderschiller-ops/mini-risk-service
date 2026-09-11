@@ -1,0 +1,29 @@
+type: datajob
+id: map_swap_cashflows
+name: Swap Cashflow Processing
+description: Erzeugt Risikopositionen aus Swap-Cashflows
+
+inputs:
+  - dataset: swap_cashflows
+  - dataset: forward_rates
+  - dataset: discount_rates
+
+pipeline:
+  - id: load_cashflows
+    type: read
+    input: swap_cashflows
+
+  - id: enrich_rates
+    type: join
+    inputs: [swap_cashflows, forward_rates, discount_rates]
+
+  - id: calculate_values
+    type: sql
+    sql: swap_valuation.sql
+
+  - id: map_output
+    type: mapping
+    target: risk_positions
+
+outputs:
+  - dataset: risk_positions

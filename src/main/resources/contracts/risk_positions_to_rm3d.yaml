@@ -1,0 +1,25 @@
+type: datajob
+id: risk_positions_to_rm3d
+name: RM3D Output Transformation
+
+input:
+  dataset: risk_positions
+
+output:
+  dataset: rm3d_output
+
+pipeline:
+  - id: map_rm3d_format
+    type: mapping
+    description: Überführung in das rm3d-Zielformat
+
+fieldMappings:
+  - source: risk_positions.trade_id
+    target: rm3d.trade_id
+  - source: risk_positions.present_value
+    target: rm3d.market_value
+
+target:
+  type: file
+  format: rm3d
+  location: travic-link/output

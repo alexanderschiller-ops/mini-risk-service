@@ -1,0 +1,4 @@
+rows=20
+trade_id=00001
+market_value_sum=-6460.712349299316123
+excel_market_value=-6460.712349299317

@@ -1,0 +1,55 @@
+type: dataset
+id: risk_positions
+name: Risikopositionen
+description: Persistierte Risikopositionen im allgemeinen Zielformat
+
+system: NONAME
+domain: Risk
+version: 1.0
+
+storage:
+  type: database
+  database: riskdb
+  schema: public
+  table: risk_positions
+
+owner: Risk IT
+classification: internal
+
+fields:
+  - name: position_id
+    type: string
+    required: true
+    primaryKey: true
+
+  - name: trade_id
+    type: string
+    required: true
+
+  - name: product_type
+    type: string
+    required: true
+
+  - name: cashflow_date
+    type: date
+    required: true
+
+  - name: nominal
+    type: decimal
+
+  - name: rate
+    type: decimal
+
+  - name: discount
+    type: decimal
+
+  - name: present_value
+    type: decimal
+
+lineage:
+  producedBy: map_swap_cashflows
+
+tags:
+  - risk
+  - positions
+  - persisted-output
