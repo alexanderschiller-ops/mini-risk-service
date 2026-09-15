@@ -1,0 +1,38 @@
+name: TDL Lineage Agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/main/java/**'
+      - 'tools/tdl_comment_agent.py'
+      - 'src/main/resources/contracts/**'
+      - 'tdl-output/**'
+  pull_request:
+    paths:
+      - 'src/main/java/**'
+      - 'tools/tdl_comment_agent.py'
+      - 'src/main/resources/contracts/**'
+      - 'tdl-output/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-lineage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate lineage from Java comments
+        run: |
+          python3 tools/tdl_comment_agent.py \
+            --source src/main/java \
+            --output tdl-output \
+            --contracts src/main/resources/contracts
+
+      - name: Verify generated YAML is committed
+        run: |
+          git diff --exit-code -- tdl-output src/main/resources/contracts

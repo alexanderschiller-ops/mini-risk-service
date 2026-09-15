@@ -16,6 +16,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+// @tdl.job id=risk_positions_to_rm3d name="RM3D Output Transformation" inputStyle=single outputStyle=single
+// @tdl.input dataset=risk_positions
+// @tdl.output dataset=rm3d_output
+// @tdl.pipeline id=map_rm3d_format type=mapping description="Überführung in das rm3d-Zielformat"
+// @tdl.target type=file format=rm3d location=travic-link/output
 public class Rm3dOutputService {
 
     private static final String JOB = "risk_positions_to_rm3d";

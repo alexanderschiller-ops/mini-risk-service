@@ -18,6 +18,15 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
+// @tdl.job id=map_swap_cashflows name="Swap Cashflow Processing" description="Erzeugt Risikopositionen aus Swap-Cashflows"
+// @tdl.input dataset=swap_cashflows
+// @tdl.input dataset=forward_rates
+// @tdl.input dataset=discount_rates
+// @tdl.pipeline id=load_cashflows type=read input=swap_cashflows
+// @tdl.pipeline id=enrich_rates type=join inputs=swap_cashflows,forward_rates,discount_rates
+// @tdl.pipeline id=calculate_values type=sql sql=swap_valuation.sql
+// @tdl.pipeline id=map_output type=mapping target=risk_positions
+// @tdl.output dataset=risk_positions
 public class SwapRiskProcessingService {
 
     private static final String JOB = "map_swap_cashflows";
@@ -97,12 +106,10 @@ public class SwapRiskProcessingService {
         BigDecimal netCashflow = payerCashflow.add(receiverCashflow, MC);
 
         BigDecimal discountBase = BigDecimal.ONE.add(
-                discount.rate().multiply(cashflow.accrualYears(), MC),
-                MC);
+                discount.rate().multiply(cashflow.accrualYears(), MC), MC);
 
         BigDecimal discountFactor = BigDecimal.ONE.divide(
-                discountBase.pow(cashflow.period(), MC),
-                MC);
+                discountBase.pow(cashflow.period(), MC), MC);
 
         BigDecimal presentValue = netCashflow
                 .multiply(discountFactor, MC)
@@ -113,18 +120,9 @@ public class SwapRiskProcessingService {
         assertMatchesExcel("Netto CF", cashflow, netCashflow, cashflow.expectedNetCashflow());
 
         return new EnrichedSwapCashflow(
-                cashflow.tradeId(),
-                cashflow.period(),
-                cashflow.cashflowDate(),
-                cashflow.currency(),
-                cashflow.nominal(),
-                forward.rate(),
-                discount.rate(),
-                payerCashflow,
-                receiverCashflow,
-                netCashflow,
-                discountFactor,
-                presentValue);
+                cashflow.tradeId(), cashflow.period(), cashflow.cashflowDate(),
+                cashflow.currency(), cashflow.nominal(), forward.rate(), discount.rate(),
+                payerCashflow, receiverCashflow, netCashflow, discountFactor, presentValue);
     }
 
     private void assertMatchesExcel(
@@ -132,7 +130,6 @@ public class SwapRiskProcessingService {
             SwapCashflow cashflow,
             BigDecimal calculated,
             BigDecimal expected) {
-
         if (calculated.subtract(expected).abs().compareTo(TOLERANCE) > 0) {
             throw new IllegalStateException(
                     field + " weicht in Periode " + cashflow.period()
