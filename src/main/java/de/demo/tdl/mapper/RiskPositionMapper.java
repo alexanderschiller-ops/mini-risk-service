@@ -12,12 +12,8 @@ public interface RiskPositionMapper {
     @Mapping(
             target = "positionId",
             expression = "java(String.format(\"POS-%s-%02d\", source.tradeId(), source.period()))")
-    @Mapping(target = "tradeId", source = "tradeId")
     @Mapping(target = "productType", constant = "Plain Vanilla Swap")
-    @Mapping(target = "cashflowDate", source = "cashflowDate")
-    @Mapping(target = "nominal", source = "nominal")
     @Mapping(target = "rate", source = "forwardRate")
     @Mapping(target = "discount", source = "discountRate")
-    @Mapping(target = "presentValue", source = "presentValue")
     RiskPosition toRiskPosition(EnrichedSwapCashflow source);
 }

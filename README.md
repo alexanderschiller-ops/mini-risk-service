@@ -1,55 +1,30 @@
-# Mini Risk Service – Excel-Testdaten, MapStruct und OpenLineage
+# mini-risk-service
 
-Datenfluss: `Excel-Testdaten -> InputDB/CSV -> map_swap_cashflows -> risk_positions -> risk_positions_to_rm3d -> RM3D`.
+Java-21-Draft fuer Technical Data Lineage eines Swap-Risikoprozesses mit MapStruct und OpenLineage.
 
-## Testdaten aus MVP_Beispiel.xlsx
+## Ablauf
 
-Unter `data/input/` liegen die aus dem Excel übernommenen 20 Halbjahresperioden:
+`swap_cashflows + forward_rates + discount_rates -> map_swap_cashflows -> risk_positions -> risk_positions_to_rm3d -> rm3d_output`
 
-- `swap_cashflows.csv`: Trade `00001`, Nominal 100.000 EUR, Fixzins 4 %, Payer/Receiver/Netto-Cashflows
-- `forward_reference_rates.csv`: Forward-/Referenzzinswerte 2,0 % bis 4,2 % usw.
-- `discount_rates.csv`: Discount Rates 1,9 % bis 3,8 %
+Die Beispieldaten aus dem Excel liegen unter `data/input/`. Die Anwendung erzeugt die RisikoPosDB-Simulation unter `runtime-output/risk_positions.csv`, die RM3D-Ausgabe unter `travic-link/output/rm3d_output.rm3d` und exportiert die drei TDL-Vertraege nach `tdl-output/`.
 
-Für die ausführbare Demo ist das Excel-Sheet `2_Marktdaten_Mapping` maßgeblich. So wird der dort gezeigte Marktwert reproduziert.
+## MapStruct und Lineage
 
-## Bewertungslogik
+MapStruct mappt Properties mit gleichem Namen automatisch. Deshalb werden im `RiskPositionMapper` nur fachlich notwendige explizite Mappings angegeben, z. B. `forwardRate -> rate`, `discountRate -> discount`, eine Konstante oder eine Expression. Gleichnamige Felder wie `tradeId`, `cashflowDate`, `nominal` und `presentValue` brauchen keine redundante `@Mapping`-Annotation.
 
-`Payer CF = -Nominal * FixedRate * 0.5`
+Wichtig: Die YAML-Vertraege werden nicht aus den `@Mapping`-Annotationen erzeugt. `TdlContractExporter` exportiert die statischen Contracts aus `src/main/resources/contracts`. Damit bleibt die Dataset-/Job-Lineage unabhaengig davon, ob MapStruct ein Feld explizit oder implizit mappt.
 
-`Receiver CF = Nominal * ForwardRate * 0.5`
+Fuer eine spaetere automatische Column-Lineage sollte die Extraktion beide Faelle beruecksichtigen: explizite `@Mapping`-Definitionen und MapStructs implizite Same-Name-Mappings. Entwickler sollen nicht gezwungen sein, redundante Annotationen nur fuer die Lineage zu pflegen.
 
-`Netto CF = Payer CF + Receiver CF`
-
-`DiscountFactor = 1 / (1 + DiscountRate * 0.5)^Periode`
-
-`PresentValue = Netto CF * DiscountFactor`
-
-Summe der 20 Barwerte: ca. `-6460.712349299317`, entsprechend dem Excel-Beispiel.
-
-## YAML-Ausleitung
-
-Die drei Contract-Templates liegen unter `src/main/resources/contracts/`. Beim Start kopiert `TdlContractExporter` sie in den gewünschten Projekt-Unterordner:
-
-```text
-tdl-output/
-  map_swap_cashflows.yaml
-  risk_positions_to_rm3d.yaml
-  risk_positions.yaml
-```
-
-## OpenLineage + MapStruct
-
-`RiskPositionMapper` mappt die angereicherten Cashflows auf `risk_positions`; `Rm3dMapper` mappt anschließend `trade_id` und `present_value` ins RM3D-Format. Der OpenLineage-Java-Client emittiert für beide Datajobs `START`, `COMPLETE` und im Fehlerfall `FAIL` inklusive Input-/Output-Datasets.
-
-## Start
-
-Voraussetzungen: JDK 21 und Maven 3.9+.
+## Build und Start
 
 ```bash
 mvn clean test
 mvn exec:java
 ```
 
-Erzeugt werden `runtime-output/risk_positions.csv`, `travic-link/output/rm3d_output.rm3d` und die drei YAMLs unter `tdl-output/`.
+MapStruct generiert die Implementierungen beim Compile unter `target/generated-sources/annotations`; die kompilierten Klassen liegen unter `target/classes`.
 
-Unter `example-output/` liegen bereits berechnete Referenzergebnisse zum Abgleich.
+## Excel-Testdaten
+
+Die Bewertung verwendet die Werte aus `2_Marktdaten_Mapping` als fachlich massgebliche Referenz. Die Sequenzen in den Raw-Curve-Sheets sind gegenueber den dortigen Labels auffaellig vertauscht. Der erwartete Gesamtmarktwert des Beispiel-Swaps ist rund `-6460.712349299317` bei 20 Risikopositionen.
