@@ -1,5 +1,6 @@
 package de.demo.tdl.architecture;
 
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
@@ -59,6 +60,9 @@ class TdlLineageArchitectureTest {
 
     @Test
     void allMapStructMappingsMustHaveResolvableLineage() throws IOException {
+        StaticJavaParser.getParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21);
+
         List<String> problems = new ArrayList<>();
         List<Path> javaFiles;
 
