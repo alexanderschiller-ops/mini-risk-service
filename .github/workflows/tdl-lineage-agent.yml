@@ -4,13 +4,17 @@ on:
   push:
     branches: [main]
     paths:
+      - 'pom.xml'
       - 'src/main/java/**'
+      - 'src/test/java/**'
       - 'tools/tdl_comment_agent.py'
       - 'src/main/resources/contracts/**'
       - 'tdl-output/**'
   pull_request:
     paths:
+      - 'pom.xml'
       - 'src/main/java/**'
+      - 'src/test/java/**'
       - 'tools/tdl_comment_agent.py'
       - 'src/main/resources/contracts/**'
       - 'tdl-output/**'
@@ -25,6 +29,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Run Java architecture and integration tests
+        run: mvn -B test
 
       - name: Generate lineage from Java comments
         run: |
