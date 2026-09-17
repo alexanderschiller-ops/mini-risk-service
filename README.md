@@ -6,11 +6,19 @@ Java-21-Draft fuer Technical Data Lineage eines Swap-Risikoprozesses mit MapStru
 
 `swap_cashflows + forward_rates + discount_rates -> map_swap_cashflows -> risk_positions -> risk_positions_to_rm3d -> rm3d_output`
 
-Die Beispieldaten aus dem Excel liegen unter `data/input/`. Die Anwendung erzeugt die RisikoPosDB-Simulation unter `runtime-output/risk_positions.csv`, die RM3D-Ausgabe unter `travic-link/output/rm3d_output.rm3d` und exportiert die TDL-Vertraege nach `tdl-output/`.
+Die Beispieldaten aus dem Excel liegen unter `data/input/`. Die Anwendung erzeugt die RisikoPosDB-Simulation unter `runtime-output/risk_positions.csv` und die RM3D-Ausgabe unter `travic-link/output/rm3d_output.rm3d`. Die TDL-Vertraege werden beim Testlauf nach `target/tdl-output/` exportiert.
 
 ## TDL-Vertraege
 
-Die TDL-YAMLs werden unter `src/main/resources/contracts/` gepflegt. Beim Start kopiert `TdlContractExporter` diese Vertraege nach `tdl-output/`. Die vorhandenen `@tdl.*`-Kommentare dokumentieren die Verarbeitung; eine automatische YAML-Generierung aus diesen Kommentaren findet nicht statt.
+Die TDL-YAMLs werden unter `src/main/resources/contracts/` gepflegt. `TdlContractExportTest` ruft `TdlContractExporter` auf, prueft Vollstaendigkeit und Inhalt der frisch exportierten Dateien und legt die geprueften Vertraege unter `target/tdl-output/` ab. Die `main`-Methode exportiert keine TDL-YAMLs mehr. Die vorhandenen `@tdl.*`-Kommentare dokumentieren die Verarbeitung; eine automatische YAML-Generierung aus diesen Kommentaren findet nicht statt.
+
+Der Export laeuft mit `mvn test`. Nur die Ausleitung ausfuehren:
+
+```bash
+mvn -Dtest=TdlContractExportTest test
+```
+
+In Eclipse: Rechtsklick auf `TdlContractExportTest` unter `src/test/java` -> **Run As -> JUnit Test**. Danach das Projekt mit **F5** aktualisieren, um die Dateien unter `target/tdl-output/` zu sehen. Die bisherigen Beispieldateien unter `tdl-output/` werden dabei nicht aktualisiert. Laufzeit-OpenLineage-Events bleiben davon unabhaengig.
 
 ## MapStruct-Architektur-Test
 

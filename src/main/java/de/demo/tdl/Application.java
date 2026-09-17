@@ -2,7 +2,6 @@ package de.demo.tdl;
 
 import de.demo.tdl.domain.RiskPosition;
 import de.demo.tdl.lineage.OpenLineageEmitter;
-import de.demo.tdl.lineage.TdlContractExporter;
 import de.demo.tdl.repository.InputDb;
 import de.demo.tdl.repository.RiskPositionDb;
 import de.demo.tdl.service.Rm3dOutputService;
@@ -18,12 +17,9 @@ public class Application {
         Path inputDir = args.length > 0 ? Path.of(args[0]) : Path.of("data", "input");
         Path runtimeDir = Path.of("runtime-output");
         Path rm3dDir = Path.of("travic-link", "output");
-        Path tdlDir = Path.of("tdl-output");
 
         Files.createDirectories(runtimeDir);
         Files.createDirectories(rm3dDir);
-        Files.createDirectories(tdlDir);
-        TdlContractExporter.exportAll(tdlDir);
 
         InputDb inputDb = new InputDb(inputDir);
         RiskPositionDb riskDb = new RiskPositionDb(runtimeDir.resolve("risk_positions.csv"));
@@ -43,6 +39,5 @@ public class Application {
         System.out.println("Marktwert des Swaps: " + marketValue.toPlainString());
         System.out.println("RisikoPosDB-Simulation: " + runtimeDir.resolve("risk_positions.csv").toAbsolutePath());
         System.out.println("RM3D-Datei: " + rm3dFile.toAbsolutePath());
-        System.out.println("YAML-Ausleitung: " + tdlDir.toAbsolutePath());
     }
 }

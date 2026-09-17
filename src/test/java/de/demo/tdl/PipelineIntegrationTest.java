@@ -2,7 +2,6 @@ package de.demo.tdl;
 
 import de.demo.tdl.domain.RiskPosition;
 import de.demo.tdl.lineage.OpenLineageEmitter;
-import de.demo.tdl.lineage.TdlContractExporter;
 import de.demo.tdl.repository.InputDb;
 import de.demo.tdl.repository.RiskPositionDb;
 import de.demo.tdl.service.Rm3dOutputService;
@@ -25,11 +24,8 @@ class PipelineIntegrationTest {
 
     @Test
     void excelTestdatenLaufenDurchDieKomplettePipeline() throws Exception {
-        Path tdlDir = tempDir.resolve("tdl-output");
         Path riskFile = tempDir.resolve("risk_positions.csv");
         Path rm3dDir = tempDir.resolve("rm3d");
-
-        TdlContractExporter.exportAll(tdlDir);
 
         InputDb inputDb = new InputDb(Path.of("data", "input"));
         RiskPositionDb riskDb = new RiskPositionDb(riskFile);
@@ -55,9 +51,5 @@ class PipelineIntegrationTest {
 
         assertEquals(21, Files.readAllLines(riskFile).size());
         assertEquals(21, Files.readAllLines(rm3dDir.resolve("rm3d_output.rm3d")).size());
-
-        assertTrue(Files.exists(tdlDir.resolve("map_swap_cashflows.yaml")));
-        assertTrue(Files.exists(tdlDir.resolve("risk_positions_to_rm3d.yaml")));
-        assertTrue(Files.exists(tdlDir.resolve("risk_positions.yaml")));
     }
 }
