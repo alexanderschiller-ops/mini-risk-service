@@ -74,8 +74,12 @@ class TdlLineageArchitectureTest {
                     .toList();
         }
 
+        List<CompilationUnit> units = new ArrayList<>();
         for (Path path : javaFiles) {
-            analyze(path, problems);
+            units.add(StaticJavaParser.parse(path));
+        }
+        for (int i = 0; i < javaFiles.size(); i++) {
+            analyze(javaFiles.get(i), units.get(i), units, problems);
         }
 
         assertTrue(
@@ -83,16 +87,31 @@ class TdlLineageArchitectureTest {
                 () -> "TDL-Architekturverletzungen:\n - " + String.join("\n - ", problems));
     }
 
-    private static void analyze(Path path, List<String> problems) throws IOException {
-        CompilationUnit unit = StaticJavaParser.parse(path);
+    static List<String> analyzeSources(String... sources) {
+        StaticJavaParser.getParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21);
+        List<CompilationUnit> units = java.util.Arrays.stream(sources)
+                .map(StaticJavaParser::parse).toList();
+        List<String> problems = new ArrayList<>();
+        for (int i = 0; i < units.size(); i++) {
+            analyze(Path.of("Fixture" + i + ".java"), units.get(i), units, problems);
+        }
+        return problems;
+    }
+
+    private static void analyze(Path path, CompilationUnit unit,
+                                List<CompilationUnit> units, List<String> problems) {
 
         for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
+            validateManualAnnotations(path, type, problems);
+            for (MethodDeclaration method : type.getMethods()) {
+                validateManualAnnotations(path, method, problems);
+            }
+            validateService(path, type, units, problems);
             Optional<AnnotationExpr> mapperAnnotation = annotation(type, "Mapper");
             if (mapperAnnotation.isEmpty()) {
                 continue;
             }
-
-            validateManualAnnotations(path, type, problems);
 
             List<String> typeReasons = new ArrayList<>();
             if (hasAttribute(mapperAnnotation.get(), "uses")) {
@@ -114,7 +133,6 @@ class TdlLineageArchitectureTest {
             }
 
             for (MethodDeclaration method : type.getMethods()) {
-                validateManualAnnotations(path, method, problems);
                 List<String> reasons = riskyReasons(method);
                 if (!reasons.isEmpty() && !hasAnnotation(method, "TdlManual")) {
                     problems.add(location(path, method) + ": Mapper-Methode " + method.getNameAsString()
@@ -125,6 +143,64 @@ class TdlLineageArchitectureTest {
         }
     }
 
+    private static void validateService(Path path, ClassOrInterfaceDeclaration type,
+                                        List<CompilationUnit> units, List<String> problems) {
+        if (!hasAnnotation(type, "MicroService")) return;
+        boolean relevant = hasAnnotation(type, "LineageRelevant");
+        boolean excluded = hasAnnotation(type, "NotLineageRelevant");
+        if (relevant == excluded) {
+            problems.add(location(path, type) + ": @MicroService muss genau eine Klassifizierung tragen");
+        }
+        annotation(type, "NotLineageRelevant").ifPresent(a -> {
+            var reason = a.isNormalAnnotationExpr()
+                    ? a.asNormalAnnotationExpr().getPairs().stream()
+                        .filter(p -> p.getNameAsString().equals("reason"))
+                        .map(MemberValuePair::getValue).findFirst()
+                    : Optional.<com.github.javaparser.ast.expr.Expression>empty();
+            // Source-only validation: require a literal, so unresolved constants cannot hide blanks.
+            if (reason.isEmpty() || !reason.get().isStringLiteralExpr()
+                    || reason.get().asStringLiteralExpr().asString().isBlank()) {
+                problems.add(location(path, type)
+                        + ": @NotLineageRelevant reason muss ein nicht leeres String-Literal sein");
+            }
+        });
+        if (!relevant || excluded) return;
+        boolean manual = hasAnnotation(type, "TdlManual")
+                || type.getMethods().stream().anyMatch(m -> hasAnnotation(m, "TdlManual"));
+        boolean mapper = hasAnnotation(type, "Mapper") || units.stream()
+                .flatMap(u -> u.findAll(ClassOrInterfaceDeclaration.class).stream())
+                .filter(m -> hasAnnotation(m, "Mapper"))
+                .filter(m -> m.getMethods().stream().anyMatch(method ->
+                        method.getBody().isEmpty() && !method.getType().isVoidType()
+                                && !method.getParameters().isEmpty()))
+                .anyMatch(m -> type.getFields().stream().flatMap(f -> f.getVariables().stream())
+                        .anyMatch(v -> {
+                            String declared = v.getType().asString();
+                            String qualified = m.getFullyQualifiedName().orElse(m.getNameAsString());
+                            boolean resolved = declared.equals(qualified)
+                                    || (declared.equals(m.getNameAsString())
+                                        && (type.findCompilationUnit().orElseThrow().getPackageDeclaration()
+                                                .map(p -> p.getNameAsString()).orElse("")
+                                            .equals(m.findCompilationUnit().orElseThrow().getPackageDeclaration()
+                                                .map(p -> p.getNameAsString()).orElse(""))
+                                            || type.findCompilationUnit().orElseThrow().getImports().stream()
+                                                .anyMatch(i -> !i.isStatic() && i.getNameAsString().equals(qualified))));
+                            return resolved && (type.findAll(com.github.javaparser.ast.expr.MethodCallExpr.class)
+                                    .stream().anyMatch(call -> call.getScope()
+                                        .map(scope -> scope.toString().equals(v.getNameAsString())
+                                                || scope.toString().equals("this." + v.getNameAsString()))
+                                        .orElse(false) && m.getMethodsByName(call.getNameAsString()).size() > 0)
+                                    || type.findAll(com.github.javaparser.ast.expr.MethodReferenceExpr.class)
+                                    .stream().anyMatch(ref -> (ref.getScope().toString().equals(v.getNameAsString())
+                                                || ref.getScope().toString().equals("this." + v.getNameAsString()))
+                                            && !m.getMethodsByName(ref.getIdentifier()).isEmpty()));
+                        }));
+        if (!manual && !mapper) {
+            problems.add(location(path, type)
+                    + ": @LineageRelevant benoetigt verwendeten MapStruct-Mapper oder @TdlManual");
+        }
+    }
+
     private static List<String> riskyReasons(MethodDeclaration method) {
         List<String> reasons = new ArrayList<>();
 
@@ -132,7 +208,8 @@ class TdlLineageArchitectureTest {
             reasons.add("eigene Java-Implementierung/Default-Methode");
         }
 
-        for (AnnotationExpr annotation : method.getAnnotations()) {
+        for (AnnotationExpr annotation : method.getAnnotations().stream()
+                .flatMap(a -> a.findAll(AnnotationExpr.class).stream()).toList()) {
             String name = simpleName(annotation);
 
             if (name.equals("Mapping")) {
@@ -183,7 +260,8 @@ class TdlLineageArchitectureTest {
             NodeWithAnnotations<?> node,
             List<String> problems) {
 
-        for (AnnotationExpr annotation : node.getAnnotations()) {
+        for (AnnotationExpr annotation : node.getAnnotations().stream()
+                .flatMap(a -> a.findAll(AnnotationExpr.class).stream()).toList()) {
             if (!simpleName(annotation).equals("TdlManual")) {
                 continue;
             }
@@ -225,6 +303,11 @@ class TdlLineageArchitectureTest {
     }
 
     private static boolean hasAnnotation(NodeWithAnnotations<?> node, String simpleName) {
+        if (simpleName.equals("TdlManual")) {
+            return node.getAnnotations().stream()
+                    .flatMap(a -> a.findAll(AnnotationExpr.class).stream())
+                    .anyMatch(a -> simpleName(a).equals("TdlManual"));
+        }
         return annotation(node, simpleName).isPresent();
     }
 

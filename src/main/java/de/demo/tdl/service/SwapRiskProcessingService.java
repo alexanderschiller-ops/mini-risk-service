@@ -1,5 +1,10 @@
 package de.demo.tdl.service;
 
+import de.demo.tdl.lineage.MicroService;
+import de.demo.tdl.lineage.TdlManual;
+import de.demo.tdl.lineage.TdlType;
+import de.demo.tdl.lineage.LineageRelevant;
+
 import de.demo.tdl.domain.DiscountRate;
 import de.demo.tdl.domain.EnrichedSwapCashflow;
 import de.demo.tdl.domain.ForwardRate;
@@ -27,6 +32,8 @@ import java.util.UUID;
 // @tdl.pipeline id=calculate_values type=sql sql=swap_valuation.sql
 // @tdl.pipeline id=map_output type=mapping target=risk_positions
 // @tdl.output dataset=risk_positions
+@MicroService
+@LineageRelevant
 public class SwapRiskProcessingService {
 
     private static final String JOB = "map_swap_cashflows";
@@ -77,6 +84,11 @@ public class SwapRiskProcessingService {
         }
     }
 
+    @TdlManual(
+            source = "swap_cashflows,forward_rates,discount_rates",
+            target = "EnrichedSwapCashflow",
+            type = TdlType.TRANSFORM,
+            commentary = "Zinsen nach Cashflow-Datum zuordnen; Payer-, Receiver- und Netto-Cashflow, Discount-Faktor und Barwert berechnen")
     private EnrichedSwapCashflow enrichAndValue(
             SwapCashflow cashflow,
             List<ForwardRate> forwards,

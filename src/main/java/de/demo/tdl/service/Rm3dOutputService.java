@@ -1,5 +1,8 @@
 package de.demo.tdl.service;
 
+import de.demo.tdl.lineage.MicroService;
+import de.demo.tdl.lineage.LineageRelevant;
+
 import de.demo.tdl.domain.Rm3dRecord;
 import de.demo.tdl.lineage.OpenLineageEmitter;
 import de.demo.tdl.lineage.OpenLineageEmitter.DatasetRef;
@@ -21,6 +24,8 @@ import java.util.UUID;
 // @tdl.output dataset=rm3d_output
 // @tdl.pipeline id=map_rm3d_format type=mapping description="Überführung in das rm3d-Zielformat"
 // @tdl.target type=file format=rm3d location=travic-link/output
+@MicroService
+@LineageRelevant
 public class Rm3dOutputService {
 
     private static final String JOB = "risk_positions_to_rm3d";
