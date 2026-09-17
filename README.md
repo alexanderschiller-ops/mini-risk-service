@@ -8,27 +8,9 @@ Java-21-Draft fuer Technical Data Lineage eines Swap-Risikoprozesses mit MapStru
 
 Die Beispieldaten aus dem Excel liegen unter `data/input/`. Die Anwendung erzeugt die RisikoPosDB-Simulation unter `runtime-output/risk_positions.csv`, die RM3D-Ausgabe unter `travic-link/output/rm3d_output.rm3d` und exportiert die TDL-Vertraege nach `tdl-output/`.
 
-## Kommentargesteuerter TDL-Agent
+## TDL-Vertraege
 
-Die technische Lineage kann aus strukturierten Java-Kommentaren erzeugt werden. Beispiele:
-
-```java
-// @tdl.job id=map_swap_cashflows name="Swap Cashflow Processing"
-// @tdl.input dataset=swap_cashflows
-// @tdl.output dataset=risk_positions
-```
-
-Feld-Lineage wird genauso beschrieben:
-
-```java
-// @tdl.field-map job=risk_positions_to_rm3d source=risk_positions.present_value target=rm3d.market_value
-```
-
-Der Generator liegt unter `tools/tdl_comment_agent.py`. Lokal kann er so ausgefuehrt werden:
-
-```bash
-python3 tools/tdl_comment_agent.py --source src/main/java --output tdl-output --contracts src/main/resources/contracts
-```
+Die TDL-YAMLs werden unter `src/main/resources/contracts/` gepflegt. Beim Start kopiert `TdlContractExporter` diese Vertraege nach `tdl-output/`. Die vorhandenen `@tdl.*`-Kommentare dokumentieren die Verarbeitung; eine automatische YAML-Generierung aus diesen Kommentaren findet nicht statt.
 
 ## MapStruct-Architektur-Test
 

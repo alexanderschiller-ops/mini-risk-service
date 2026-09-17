@@ -7,7 +7,7 @@ on:
       - 'pom.xml'
       - 'src/main/java/**'
       - 'src/test/java/**'
-      - 'tools/tdl_comment_agent.py'
+      - '.github/workflows/tdl-lineage-agent.yml'
       - 'src/main/resources/contracts/**'
       - 'tdl-output/**'
   pull_request:
@@ -15,7 +15,7 @@ on:
       - 'pom.xml'
       - 'src/main/java/**'
       - 'src/test/java/**'
-      - 'tools/tdl_comment_agent.py'
+      - '.github/workflows/tdl-lineage-agent.yml'
       - 'src/main/resources/contracts/**'
       - 'tdl-output/**'
   workflow_dispatch:
@@ -39,14 +39,3 @@ jobs:
 
       - name: Run Java architecture and integration tests
         run: mvn -B test
-
-      - name: Generate lineage from Java comments
-        run: |
-          python3 tools/tdl_comment_agent.py \
-            --source src/main/java \
-            --output tdl-output \
-            --contracts src/main/resources/contracts
-
-      - name: Verify generated YAML is committed
-        run: |
-          git diff --exit-code -- tdl-output src/main/resources/contracts
