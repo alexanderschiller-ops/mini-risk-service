@@ -3,10 +3,12 @@ package de.demo.tdl;
 import de.demo.tdl.domain.RiskPosition;
 import de.demo.tdl.lineage.OpenLineageEmitter;
 import de.demo.tdl.repository.InputDb;
+import de.demo.tdl.repository.InputDbConfig;
 import de.demo.tdl.repository.RiskPositionDb;
 import de.demo.tdl.service.Rm3dOutputService;
 import de.demo.tdl.service.SwapRiskProcessingService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.math.BigDecimal;
@@ -17,6 +19,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@EnabledIfEnvironmentVariable(named = "INPUT_DB_TEST_URL", matches = ".+")
 class PipelineIntegrationTest {
 
     @TempDir
@@ -27,7 +30,10 @@ class PipelineIntegrationTest {
         Path riskFile = tempDir.resolve("risk_positions.csv");
         Path rm3dDir = tempDir.resolve("rm3d");
 
-        InputDb inputDb = new InputDb(Path.of("data", "input"));
+        InputDb inputDb = new InputDb(new InputDbConfig(
+                System.getenv("INPUT_DB_TEST_URL"),
+                System.getenv().getOrDefault("INPUT_DB_TEST_USER", "inputdb"),
+                System.getenv().getOrDefault("INPUT_DB_TEST_PASSWORD", "inputdb")));
         RiskPositionDb riskDb = new RiskPositionDb(riskFile);
 
         List<RiskPosition> positions;

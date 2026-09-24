@@ -1,0 +1,20 @@
+services:
+  input-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: inputdb
+      POSTGRES_USER: ${INPUT_DB_USER:-inputdb}
+      POSTGRES_PASSWORD: ${INPUT_DB_PASSWORD:-inputdb}
+    ports:
+      - "127.0.0.1:${INPUT_DB_PORT:-5432}:5432"
+    volumes:
+      - input-db-data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  input-db-data:

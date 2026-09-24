@@ -1,9 +1,5 @@
 package de.demo.tdl.service;
 
-import de.demo.tdl.lineage.MicroService;
-import de.demo.tdl.lineage.TdlManual;
-import de.demo.tdl.lineage.TdlType;
-import de.demo.tdl.lineage.LineageRelevant;
 
 import de.demo.tdl.domain.DiscountRate;
 import de.demo.tdl.domain.EnrichedSwapCashflow;
@@ -22,18 +18,6 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
-
-// @tdl.job id=map_swap_cashflows name="Swap Cashflow Processing" description="Erzeugt Risikopositionen aus Swap-Cashflows"
-// @tdl.input dataset=swap_cashflows
-// @tdl.input dataset=forward_rates
-// @tdl.input dataset=discount_rates
-// @tdl.pipeline id=load_cashflows type=read input=swap_cashflows
-// @tdl.pipeline id=enrich_rates type=join inputs=swap_cashflows,forward_rates,discount_rates
-// @tdl.pipeline id=calculate_values type=sql sql=swap_valuation.sql
-// @tdl.pipeline id=map_output type=mapping target=risk_positions
-// @tdl.output dataset=risk_positions
-@MicroService
-@LineageRelevant
 public class SwapRiskProcessingService {
 
     private static final String JOB = "map_swap_cashflows";
@@ -45,11 +29,7 @@ public class SwapRiskProcessingService {
     private final OpenLineageEmitter lineage;
     private final RiskPositionMapper mapper = Mappers.getMapper(RiskPositionMapper.class);
 
-    private final List<DatasetRef> lineageInputs = List.of(
-            DatasetRef.input("swap_cashflows"),
-            DatasetRef.input("forward_rates"),
-            DatasetRef.input("discount_rates")
-    );
+    private final List<DatasetRef> lineageInputs;
     private final List<DatasetRef> lineageOutputs =
             List.of(DatasetRef.risk("risk_positions"));
 
@@ -60,6 +40,10 @@ public class SwapRiskProcessingService {
         this.inputDb = inputDb;
         this.riskDb = riskDb;
         this.lineage = lineage;
+        this.lineageInputs = List.of("swap_cashflows", "forward_rates", "discount_rates")
+                .stream()
+                .map(table -> new DatasetRef(inputDb.namespace(), inputDb.qualifiedTableName(table)))
+                .toList();
     }
 
     public List<RiskPosition> execute() {
@@ -84,11 +68,6 @@ public class SwapRiskProcessingService {
         }
     }
 
-    @TdlManual(
-            source = "swap_cashflows,forward_rates,discount_rates",
-            target = "EnrichedSwapCashflow",
-            type = TdlType.TRANSFORM,
-            commentary = "Zinsen nach Cashflow-Datum zuordnen; Payer-, Receiver- und Netto-Cashflow, Discount-Faktor und Barwert berechnen")
     private EnrichedSwapCashflow enrichAndValue(
             SwapCashflow cashflow,
             List<ForwardRate> forwards,

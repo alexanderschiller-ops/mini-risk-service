@@ -3,56 +3,101 @@ package de.demo.tdl.repository;
 import de.demo.tdl.domain.DiscountRate;
 import de.demo.tdl.domain.ForwardRate;
 import de.demo.tdl.domain.SwapCashflow;
-import de.demo.tdl.util.CsvSupport;
-
-import java.math.BigDecimal;
-import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * Simuliert die externen InputDB-Datasets mit CSV-Dateien,
- * die aus dem bereitgestellten Excel-Beispiel abgeleitet wurden.
+ * Reads the source datasets from PostgreSQL. Schema and seed data are provisioned separately.
  */
 public class InputDb {
 
-    private final Path inputDir;
+    private final InputDbConfig config;
 
-    public InputDb(Path inputDir) {
-        this.inputDir = inputDir;
+    public InputDb(InputDbConfig config) {
+        this.config = Objects.requireNonNull(config, "config");
+    }
+
+    public String databaseName() {
+        return config.databaseName();
+    }
+
+    /** OpenLineage source namespace; contains neither credentials nor JDBC options. */
+    public String namespace() {
+        return config.namespace();
+    }
+
+    public String qualifiedTableName(String table) {
+        if (!List.of("swap_cashflows", "forward_rates", "discount_rates").contains(table)) {
+            throw new IllegalArgumentException("Unbekanntes Input-Dataset: " + table);
+        }
+        return databaseName() + ".public." + table;
     }
 
     public List<SwapCashflow> swapCashflows() {
-        return CsvSupport.readSemicolonFile(inputDir.resolve("swap_cashflows.csv")).stream()
-                .map(c -> new SwapCashflow(
-                        c[0],
-                        Integer.parseInt(c[1]),
-                        LocalDate.parse(c[2]),
-                        c[3],
-                        new BigDecimal(c[4]),
-                        new BigDecimal(c[5]),
-                        new BigDecimal(c[6]),
-                        new BigDecimal(c[7]),
-                        new BigDecimal(c[8]),
-                        new BigDecimal(c[9])))
-                .toList();
+        return read("""
+                SELECT trade_id, period, cashflow_date, currency, nominal, fixed_rate,
+                       accrual_years, expected_payer_cashflow, expected_receiver_cashflow,
+                       expected_net_cashflow
+                FROM public.swap_cashflows
+                ORDER BY trade_id, period
+                """, row -> new SwapCashflow(
+                row.getString("trade_id"),
+                row.getInt("period"),
+                row.getObject("cashflow_date", LocalDate.class),
+                row.getString("currency"),
+                row.getBigDecimal("nominal"),
+                row.getBigDecimal("fixed_rate"),
+                row.getBigDecimal("accrual_years"),
+                row.getBigDecimal("expected_payer_cashflow"),
+                row.getBigDecimal("expected_receiver_cashflow"),
+                row.getBigDecimal("expected_net_cashflow")));
     }
 
     public List<ForwardRate> forwardRates() {
-        return CsvSupport.readSemicolonFile(inputDir.resolve("forward_reference_rates.csv")).stream()
-                .map(c -> new ForwardRate(
-                        c[0],
-                        LocalDate.parse(c[1]),
-                        new BigDecimal(c[2])))
-                .toList();
+        return read("""
+                SELECT curve, rate_date, rate
+                FROM public.forward_rates
+                ORDER BY curve, rate_date
+                """, row -> new ForwardRate(
+                row.getString("curve"),
+                row.getObject("rate_date", LocalDate.class),
+                row.getBigDecimal("rate")));
     }
 
     public List<DiscountRate> discountRates() {
-        return CsvSupport.readSemicolonFile(inputDir.resolve("discount_rates.csv")).stream()
-                .map(c -> new DiscountRate(
-                        c[0],
-                        LocalDate.parse(c[1]),
-                        new BigDecimal(c[2])))
-                .toList();
+        return read("""
+                SELECT curve, rate_date, rate
+                FROM public.discount_rates
+                ORDER BY curve, rate_date
+                """, row -> new DiscountRate(
+                row.getString("curve"),
+                row.getObject("rate_date", LocalDate.class),
+                row.getBigDecimal("rate")));
+    }
+
+    private <T> List<T> read(String sql, RowMapper<T> mapper) {
+        try (Connection connection = config.openConnection()) {
+            connection.setReadOnly(true);
+            try (var statement = connection.prepareStatement(sql);
+                 ResultSet rows = statement.executeQuery()) {
+                List<T> result = new ArrayList<>();
+                while (rows.next()) {
+                    result.add(mapper.map(rows));
+                }
+                return List.copyOf(result);
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Input-Dataset konnte nicht aus PostgreSQL gelesen werden", ex);
+        }
+    }
+
+    @FunctionalInterface
+    private interface RowMapper<T> {
+        T map(ResultSet row) throws SQLException;
     }
 }

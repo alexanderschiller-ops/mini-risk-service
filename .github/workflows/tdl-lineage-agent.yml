@@ -1,4 +1,4 @@
-name: TDL Lineage Agent
+name: PostgreSQL and TDL contracts
 
 on:
   push:
@@ -9,6 +9,8 @@ on:
       - 'src/test/java/**'
       - '.github/workflows/tdl-lineage-agent.yml'
       - 'src/main/resources/contracts/**'
+      - 'db/**'
+      - 'compose.yaml'
       - 'tdl-output/**'
   pull_request:
     paths:
@@ -17,6 +19,8 @@ on:
       - 'src/test/java/**'
       - '.github/workflows/tdl-lineage-agent.yml'
       - 'src/main/resources/contracts/**'
+      - 'db/**'
+      - 'compose.yaml'
       - 'tdl-output/**'
   workflow_dispatch:
 
@@ -26,6 +30,24 @@ permissions:
 jobs:
   validate-lineage:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: inputdb
+          POSTGRES_USER: inputdb
+          POSTGRES_PASSWORD: inputdb-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U inputdb -d inputdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      INPUT_DB_TEST_URL: jdbc:postgresql://localhost:5432/inputdb
+      INPUT_DB_TEST_USER: inputdb
+      INPUT_DB_TEST_PASSWORD: inputdb-ci-only
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,5 +59,18 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Run Java architecture and integration tests
-        run: mvn -B test
+      - name: Initialize isolated PostgreSQL test database
+        env:
+          PGPASSWORD: inputdb-ci-only
+        run: |
+          psql -h localhost -U inputdb -d inputdb -v ON_ERROR_STOP=1 -f db/01-schema.sql
+          psql -h localhost -U inputdb -d inputdb -v ON_ERROR_STOP=1 -f db/02-seed.sql
+
+      - name: Run PostgreSQL integration and YAML export tests
+        run: mvn -B verify
+
+      - name: Upload generated dataset and datajob YAMLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdl-contracts
+          path: target/tdl-output/

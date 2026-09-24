@@ -1,0 +1,55 @@
+platform: "postgres"
+name: "inputdb.public.swap_cashflows"
+env: "DEV"
+description: "Swap cashflows; expected_* columns verify the sample valuation."
+schema:
+- name: "trade_id"
+  type: "string"
+  native_type: "varchar(64)"
+  nullable: false
+  primary_key: true
+- name: "period"
+  type: "number"
+  native_type: "integer"
+  nullable: false
+  primary_key: true
+- name: "cashflow_date"
+  type: "date"
+  native_type: "date"
+  nullable: false
+  primary_key: false
+- name: "currency"
+  type: "string"
+  native_type: "varchar(3)"
+  nullable: false
+  primary_key: false
+- name: "nominal"
+  type: "number"
+  native_type: "numeric"
+  nullable: false
+  primary_key: false
+- name: "fixed_rate"
+  type: "number"
+  native_type: "numeric"
+  nullable: false
+  primary_key: false
+- name: "accrual_years"
+  type: "number"
+  native_type: "numeric"
+  nullable: false
+  primary_key: false
+- name: "expected_payer_cashflow"
+  type: "number"
+  native_type: "numeric"
+  nullable: false
+  primary_key: false
+- name: "expected_receiver_cashflow"
+  type: "number"
+  native_type: "numeric"
+  nullable: false
+  primary_key: false
+- name: "expected_net_cashflow"
+  type: "number"
+  native_type: "numeric"
+  nullable: false
+  primary_key: false

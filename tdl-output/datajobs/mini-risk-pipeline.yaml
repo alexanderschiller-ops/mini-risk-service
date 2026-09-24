@@ -1,0 +1,115 @@
+pipeline:
+  id: "mini-risk-service"
+  name: "Mini Risk Pipeline"
+  orchestrator: "data-services"
+  platform: "postgres"
+  env: "DEV"
+  description: "PostgreSQL cashflows to risk-position CSV and RM3D. Field references\
+    \ use alias.physical_column; this convention must match the importing lineage\
+    \ parser. CONSTANT mappings have empty upstream lists."
+  jobs:
+  - id: "map_swap_cashflows"
+    name: "Swap Cashflow Processing"
+    type: "BATCH"
+    language: "JAVA"
+    description: "Reads PostgreSQL inputs, selects rates by cashflow_date, values\
+      \ cashflows and writes risk positions."
+    inputs:
+    - alias: "cashflows"
+      dataset: "inputdb.public.swap_cashflows"
+      platform: "postgres"
+      env: "DEV"
+    - alias: "forwards"
+      dataset: "inputdb.public.forward_rates"
+      platform: "postgres"
+      env: "DEV"
+    - alias: "discounts"
+      dataset: "inputdb.public.discount_rates"
+      platform: "postgres"
+      env: "DEV"
+    outputs:
+    - alias: "risk"
+      dataset: "runtime-output/risk_positions.csv"
+      platform: "file"
+      env: "DEV"
+    column_lineage:
+    - upstream:
+      - "cashflows.trade_id"
+      - "cashflows.period"
+      downstream: "risk.position_id"
+      transform_type: "TRANSFORM"
+      description: "String.format('POS-%s-%02d', trade_id, period)."
+    - upstream:
+      - "cashflows.trade_id"
+      downstream: "risk.trade_id"
+      transform_type: "IDENTITY"
+      description: "Copy trade identifier."
+    - upstream: []
+      downstream: "risk.product_type"
+      transform_type: "CONSTANT"
+      description: "Literal 'Plain Vanilla Swap'; no source column."
+    - upstream:
+      - "cashflows.cashflow_date"
+      downstream: "risk.cashflow_date"
+      transform_type: "IDENTITY"
+      description: "Copy payment date."
+    - upstream:
+      - "cashflows.nominal"
+      downstream: "risk.nominal"
+      transform_type: "IDENTITY"
+      description: "Copy nominal amount."
+    - upstream:
+      - "forwards.rate"
+      - "forwards.rate_date"
+      - "cashflows.cashflow_date"
+      downstream: "risk.rate"
+      transform_type: "LOOKUP"
+      description: "Select forward rate where rate_date equals cashflow_date."
+    - upstream:
+      - "discounts.rate"
+      - "discounts.rate_date"
+      - "cashflows.cashflow_date"
+      downstream: "risk.discount"
+      transform_type: "LOOKUP"
+      description: "Select discount rate where rate_date equals cashflow_date."
+    - upstream:
+      - "cashflows.nominal"
+      - "cashflows.fixed_rate"
+      - "cashflows.accrual_years"
+      - "cashflows.period"
+      - "cashflows.cashflow_date"
+      - "forwards.rate"
+      - "forwards.rate_date"
+      - "discounts.rate"
+      - "discounts.rate_date"
+      downstream: "risk.present_value"
+      transform_type: "TRANSFORM"
+      description: "nominal * (forward_rate - fixed_rate) * accrual_years / (1 + discount_rate\
+        \ * accrual_years)^period; HALF_UP to 15 decimal places. Rates are selected\
+        \ by cashflow_date."
+  - id: "risk_positions_to_rm3d"
+    name: "RM3D Output Transformation"
+    type: "BATCH"
+    language: "JAVA"
+    description: "Maps the persisted risk-position fields to the two-column RM3D output."
+    inputs:
+    - alias: "risk"
+      dataset: "runtime-output/risk_positions.csv"
+      platform: "file"
+      env: "DEV"
+    outputs:
+    - alias: "rm3d"
+      dataset: "travic-link/output/rm3d_output.rm3d"
+      platform: "file"
+      env: "DEV"
+    column_lineage:
+    - upstream:
+      - "risk.trade_id"
+      downstream: "rm3d.trade_id"
+      transform_type: "IDENTITY"
+      description: "Copy trade identifier."
+    - upstream:
+      - "risk.present_value"
+      downstream: "rm3d.market_value"
+      transform_type: "IDENTITY"
+      description: "Write present_value as market_value without aggregation."

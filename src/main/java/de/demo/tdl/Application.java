@@ -3,6 +3,7 @@ package de.demo.tdl;
 import de.demo.tdl.domain.RiskPosition;
 import de.demo.tdl.lineage.OpenLineageEmitter;
 import de.demo.tdl.repository.InputDb;
+import de.demo.tdl.repository.InputDbConfig;
 import de.demo.tdl.repository.RiskPositionDb;
 import de.demo.tdl.service.Rm3dOutputService;
 import de.demo.tdl.service.SwapRiskProcessingService;
@@ -14,14 +15,13 @@ import java.util.List;
 
 public class Application {
     public static void main(String[] args) throws Exception {
-        Path inputDir = args.length > 0 ? Path.of(args[0]) : Path.of("data", "input");
         Path runtimeDir = Path.of("runtime-output");
         Path rm3dDir = Path.of("travic-link", "output");
 
         Files.createDirectories(runtimeDir);
         Files.createDirectories(rm3dDir);
 
-        InputDb inputDb = new InputDb(inputDir);
+        InputDb inputDb = new InputDb(InputDbConfig.fromEnvironment());
         RiskPositionDb riskDb = new RiskPositionDb(runtimeDir.resolve("risk_positions.csv"));
 
         List<RiskPosition> positions;

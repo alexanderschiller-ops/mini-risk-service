@@ -1,0 +1,15 @@
+platform: "file"
+name: "travic-link/output/rm3d_output.rm3d"
+env: "DEV"
+description: "RM3D output: trade_id and market_value, separated by semicolons."
+schema:
+- name: "trade_id"
+  type: "string"
+  native_type: "text"
+  nullable: false
+  primary_key: false
+- name: "market_value"
+  type: "number"
+  native_type: "decimal text"
+  nullable: false
+  primary_key: false
