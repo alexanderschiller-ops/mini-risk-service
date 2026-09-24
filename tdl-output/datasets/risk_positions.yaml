@@ -1,0 +1,46 @@
+platform: "file"
+name: "runtime-output/risk_positions.csv"
+env: "DEV"
+description: "Risk positions persisted as a semicolon-separated CSV by the RiskPositionDb\
+  \ simulation."
+schema:
+- name: "position_id"
+  type: "string"
+  native_type: "text"
+  nullable: false
+  primary_key: true
+- name: "trade_id"
+  type: "string"
+  native_type: "text"
+  nullable: false
+  primary_key: false
+- name: "product_type"
+  type: "string"
+  native_type: "text"
+  nullable: false
+  primary_key: false
+- name: "cashflow_date"
+  type: "date"
+  native_type: "ISO-8601 date text"
+  nullable: false
+  primary_key: false
+- name: "nominal"
+  type: "number"
+  native_type: "decimal text"
+  nullable: false
+  primary_key: false
+- name: "rate"
+  type: "number"
+  native_type: "decimal text"
+  nullable: false
+  primary_key: false
+- name: "discount"
+  type: "number"
+  native_type: "decimal text"
+  nullable: false
+  primary_key: false
+- name: "present_value"
+  type: "number"
+  native_type: "decimal text"
+  nullable: false
+  primary_key: false

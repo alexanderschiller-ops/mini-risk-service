@@ -22,8 +22,7 @@ import java.util.UUID;
 public class OpenLineageEmitter implements AutoCloseable {
 
     public static final String JOB_NAMESPACE = "risk-demo";
-    public static final String INPUT_NAMESPACE = "inputdb://NONAME";
-    public static final String RISK_NAMESPACE = "riskdb://public";
+    public static final String RISK_NAMESPACE = "file://runtime-output";
     public static final String FILE_NAMESPACE = "file://travic-link/output";
 
     private final OpenLineage ol =
@@ -104,10 +103,6 @@ public class OpenLineageEmitter implements AutoCloseable {
     }
 
     public record DatasetRef(String namespace, String name) {
-        public static DatasetRef input(String name) {
-            return new DatasetRef(INPUT_NAMESPACE, name);
-        }
-
         public static DatasetRef risk(String name) {
             return new DatasetRef(RISK_NAMESPACE, name);
         }

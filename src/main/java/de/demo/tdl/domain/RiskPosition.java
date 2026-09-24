@@ -2,17 +2,6 @@ package de.demo.tdl.domain;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
-// @tdl.dataset id=risk_positions name="Risikopositionen" description="Persistierte Risikopositionen im allgemeinen Zielformat" system=NONAME domain=Risk version=1.0 owner="Risk IT" classification=internal producedBy=map_swap_cashflows tags=risk,positions,persisted-output
-// @tdl.storage type=database database=riskdb schema=public table=risk_positions
-// @tdl.field name=position_id type=string required=true primaryKey=true
-// @tdl.field name=trade_id type=string required=true
-// @tdl.field name=product_type type=string required=true
-// @tdl.field name=cashflow_date type=date required=true
-// @tdl.field name=nominal type=decimal
-// @tdl.field name=rate type=decimal
-// @tdl.field name=discount type=decimal
-// @tdl.field name=present_value type=decimal
 public class RiskPosition {
     private String positionId;
     private String tradeId;
