@@ -1,0 +1,40 @@
+---
+pipeline:
+  orchestrator: "data-services"
+  id: "Rm3dMapper"
+  application: "urn:de.demo:mini-risk-service:1.0.0-SNAPSHOT"
+  env: "PROD"
+  platform: "kafka"
+  jobs:
+  - id: "toRm3d"
+    type: "STREAMING"
+    application: "urn:de.demo:mini-risk-service:1.0.0-SNAPSHOT"
+    inputs:
+    - name: "RiskPosition"
+    - alias: "__UNKNOWN_DATASET_ALIAS__"
+      dataset: "__UNKNOWN_ALIAS_DATASET__"
+    outputs:
+    - name: "Rm3dRecord"
+    institutional_memory:
+      elements:
+      - title: "mini-risk-service"
+        url: "https://example.org/mini-risk-service"
+    column_lineage:
+    - downstream:
+      - "tradeId"
+      upstream:
+      - "tradeId"
+      transform_type: "DIRECT"
+    - downstream:
+      - "marketValue"
+      upstream:
+      - "presentValue"
+      transform_type: "DIRECT"
+    owners:
+    - id: "__UNKNOWN_OWNER_ID__"
+  institutional_memory:
+    elements:
+    - title: "mini-risk-service"
+      url: "https://example.org/mini-risk-service"
+  owners:
+  - id: "__UNKNOWN_OWNER_ID__"

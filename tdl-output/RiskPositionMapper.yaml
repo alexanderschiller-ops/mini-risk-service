@@ -1,0 +1,70 @@
+---
+pipeline:
+  orchestrator: "data-services"
+  id: "RiskPositionMapper"
+  application: "urn:de.demo:mini-risk-service:1.0.0-SNAPSHOT"
+  env: "PROD"
+  platform: "kafka"
+  jobs:
+  - id: "toRiskPosition"
+    type: "STREAMING"
+    application: "urn:de.demo:mini-risk-service:1.0.0-SNAPSHOT"
+    inputs:
+    - name: "EnrichedSwapCashflow"
+    - alias: "__UNKNOWN_DATASET_ALIAS__"
+      dataset: "__UNKNOWN_ALIAS_DATASET__"
+    outputs:
+    - name: "RiskPosition"
+    institutional_memory:
+      elements:
+      - title: "mini-risk-service"
+        url: "https://example.org/mini-risk-service"
+    column_lineage:
+    - downstream:
+      - "tradeId"
+      upstream:
+      - "tradeId"
+      transform_type: "DIRECT"
+    - downstream:
+      - "cashflowDate"
+      upstream:
+      - "cashflowDate"
+      transform_type: "DIRECT"
+    - downstream:
+      - "nominal"
+      upstream:
+      - "nominal"
+      transform_type: "DIRECT"
+    - downstream:
+      - "presentValue"
+      upstream:
+      - "presentValue"
+      transform_type: "DIRECT"
+    - downstream:
+      - "positionId"
+      upstream:
+      - "java(String.format(\"POS-%s-%02d\", source.tradeId(), source.period()))"
+      transform_type: "EXPRESSION"
+    - downstream:
+      - "productType"
+      upstream:
+      - "constant:Plain Vanilla Swap"
+      transform_type: "CONSTANT"
+    - downstream:
+      - "rate"
+      upstream:
+      - "forwardRate"
+      transform_type: "DIRECT"
+    - downstream:
+      - "discount"
+      upstream:
+      - "discountRate"
+      transform_type: "DIRECT"
+    owners:
+    - id: "__UNKNOWN_OWNER_ID__"
+  institutional_memory:
+    elements:
+    - title: "mini-risk-service"
+      url: "https://example.org/mini-risk-service"
+  owners:
+  - id: "__UNKNOWN_OWNER_ID__"
